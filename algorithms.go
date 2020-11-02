@@ -60,7 +60,7 @@ func (a *Algorithm) Sign(unsignedToken string) ([]byte, error) {
 func (a *Algorithm) Encode(payload *Claims) (string, error) {
 	header := a.NewHeader()
 	//1、对header序列化之后编码
-	jsonTokenHeader, err := json.Marashal(header) // 序列化数据，type 和 algotithm（嵌套了多层的json）
+	jsonTokenHeader, err := json.Marshal(header) // 序列化数据，type 和 algotithm（嵌套了多层的json）
 	if err != nil {
 		return "", errors.Wrap(err, "unable to marshal header")
 	}
@@ -71,7 +71,7 @@ func (a *Algorithm) Encode(payload *Claims) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "unable to marshal payload")
 	}
-	b64TokenPayload := base64.RqwURLEncoding.EncodeToString(jsonTokenPayload)
+	b64TokenPayload := base64.RawURLEncoding.EncodeToString(jsonTokenPayload)
 	//签名 = 头信息 + "." + payload
 	unsignedSignature := b64TokenHeader + "." + b64TokenPayload
 
@@ -80,7 +80,7 @@ func (a *Algorithm) Encode(payload *Claims) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "unable to sign token")
 	}
-	b64Signature := base64.RqwURLEncoding.EncodeToString([]byte(signature))
+	b64Signature := base64.RawURLEncoding.EncodeToString([]byte(signature))
 	//4、得到token并返回
 	token := b64TokenHeader + "." + b64TokenPayload + "." + b64Signature
 	return token, nil
@@ -111,9 +111,16 @@ func (a *Algorithm) Decode(encoded string) (*Claims, error) {
 	}, nil
 }
 
-// Validate verifies a token validity. It returns  nil if it is valid, and an error if invalid
+//Validate 验证，其实就是解码claims数据，然后比对
+func (a *Algorithm) Validate(encoded string) error {
+	_, err := a.DecodeAndValidate(encoded)
+	return err
+
+}
+
+// DecodeAndValidate verifies a token validity. It returns  nil if it is valid, and an error if invalid
 // 验证 token:验证token的签名（其实就是把header和payload签一下，然后和token里的最后一段对比是否一直），是否过期，是否在时间之前
-func (a *Algorithm) Validate(encoded string) (claims *Claims, err error) {
+func (a *Algorithm) DecodeAndValidate(encoded string) (claims *Claims, err error) {
 	claims, err = a.Decode(encoded)
 	if err != nil {
 		return
